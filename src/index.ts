@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { Client, GatewayIntentBits, PermissionsBitField, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { loadState, saveState, type BotState } from "./storage.js";
 import { calculateTime, formatTime } from "./timekeeper.js";
 
@@ -21,6 +21,10 @@ function getState(): BotState {
   return state;
 }
 
+function isAdmin(interaction: ChatInputCommandInteraction): boolean {
+  return interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator) ?? false;
+}
+
 async function handleTime(interaction: ChatInputCommandInteraction): Promise<void> {
   const s = getState();
   const result = calculateTime(s, Date.now());
@@ -28,6 +32,10 @@ async function handleTime(interaction: ChatInputCommandInteraction): Promise<voi
 }
 
 async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    return;
+  }
   const years = interaction.options.getNumber("years", true);
   const per = interaction.options.getString("per", true) as "day" | "week" | "month";
 
@@ -60,6 +68,10 @@ async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<
 }
 
 async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    return;
+  }
   const years = interaction.options.getNumber("years", true);
   const s = getState();
 
@@ -74,6 +86,10 @@ async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<
 }
 
 async function handlePause(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    return;
+  }
   const s = getState();
   if (s.paused) {
     await interaction.reply("Time is already paused.");
@@ -86,6 +102,10 @@ async function handlePause(interaction: ChatInputCommandInteraction): Promise<vo
 }
 
 async function handleResume(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    return;
+  }
   const s = getState();
   if (!s.paused) {
     await interaction.reply("Time is already running.");
