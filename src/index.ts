@@ -126,6 +126,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName("setrate")
     .setDescription("Set time progression rate")
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
     .addNumberOption((opt) =>
       opt.setName("years").setDescription("Number of in-game years").setRequired(true),
     )
@@ -144,17 +145,20 @@ const commands = [
   new SlashCommandBuilder()
     .setName("settime")
     .setDescription("Manually set the in-game year")
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
     .addNumberOption((opt) =>
       opt.setName("years").setDescription("Year number").setRequired(true),
     ),
 
   new SlashCommandBuilder()
     .setName("pause")
-    .setDescription("Pause time progression"),
+    .setDescription("Pause time progression")
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   new SlashCommandBuilder()
     .setName("resume")
-    .setDescription("Resume time progression"),
+    .setDescription("Resume time progression")
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 ].map((c) => c.toJSON());
 
 client.once("ready", async () => {
