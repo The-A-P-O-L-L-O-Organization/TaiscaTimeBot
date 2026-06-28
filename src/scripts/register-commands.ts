@@ -14,21 +14,10 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("setrate")
-    .setDescription("Set time progression rate")
+    .setDescription("Set in-game years per day")
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
     .addNumberOption((opt) =>
-      opt.setName("years").setDescription("Number of in-game years").setRequired(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("per")
-        .setDescription("Per what real-time period")
-        .setRequired(true)
-        .addChoices(
-          { name: "Day", value: "day" },
-          { name: "Week", value: "week" },
-          { name: "Month", value: "month" },
-        ),
+      opt.setName("years").setDescription("In-game years per day").setRequired(true),
     ),
 
   new SlashCommandBuilder()
