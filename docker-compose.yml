@@ -1,5 +1,6 @@
 services:
   bot:
+    image: ghcr.io/the-a-p-o-l-l-o-organization/taiscatimebot:latest
     build: .
     env_file:
       - .env
