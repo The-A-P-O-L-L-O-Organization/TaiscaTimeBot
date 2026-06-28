@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && node dist/index.js",
+    "register-commands": "tsc && node dist/scripts/register-commands.js"
   },
   "dependencies": {
     "discord.js": "^14.16.0",
