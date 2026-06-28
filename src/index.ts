@@ -9,6 +9,8 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+const ANNOUNCEMENT_CHANNEL_ID = "1520917412046700606";
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 let state: BotState;
@@ -19,6 +21,26 @@ function getState(): BotState {
     saveState(state);
   }
   return state;
+}
+
+async function checkYearTick(): Promise<void> {
+  const s = getState();
+  const now = Date.now();
+  const totalYears = calculateTime(s, now).totalYears;
+  const year = Math.floor(totalYears);
+
+  if (year > s.lastAnnouncedYear) {
+    s.lastAnnouncedYear = year;
+    saveState(s);
+    try {
+      const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
+      if (channel && "send" in channel) {
+        await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
+      }
+    } catch (err) {
+      console.error("Failed to send year announcement:", err);
+    }
+  }
 }
 
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
@@ -62,6 +84,7 @@ async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<
   s.totalPausedMs = 0;
   s.pausedAtMs = 0;
   s.paused = false;
+  s.lastAnnouncedYear = Math.floor(current.totalYears);
   saveState(s);
 
   await interaction.reply(`Rate set to ${years} years per ${per}.`);
@@ -80,6 +103,7 @@ async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<
   s.totalPausedMs = 0;
   s.pausedAtMs = 0;
   s.paused = false;
+  s.lastAnnouncedYear = Math.floor(years);
   saveState(s);
 
   await interaction.reply(`Time set to year ${years}.`);
@@ -166,6 +190,8 @@ client.once("ready", async () => {
 
   state = loadState();
   console.log("State loaded:", JSON.stringify(state, null, 2));
+
+  setInterval(checkYearTick, 10000);
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   try {

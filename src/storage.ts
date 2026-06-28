@@ -14,6 +14,7 @@ export interface BotState {
   paused: boolean;
   pausedAtMs: number;
   totalPausedMs: number;
+  lastAnnouncedYear: number;
 }
 
 const DEFAULTS: BotState = {
@@ -24,6 +25,7 @@ const DEFAULTS: BotState = {
   paused: false,
   pausedAtMs: 0,
   totalPausedMs: 0,
+  lastAnnouncedYear: 0,
 };
 
 function isValidState(obj: unknown): obj is BotState {
@@ -48,7 +50,7 @@ export function loadState(): BotState {
     const raw = readFileSync(STATE_PATH, "utf-8");
     const parsed = JSON.parse(raw);
     if (isValidState(parsed)) {
-      return parsed;
+      return { ...DEFAULTS, ...parsed };
     }
     console.warn("Invalid state.json, resetting to defaults");
   } catch (err) {
