@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { REST, Routes, SlashCommandBuilder, PermissionsBitField } from "discord.js";
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) {
@@ -15,7 +15,6 @@ const commands = [
   new SlashCommandBuilder()
     .setName("setrate")
     .setDescription("Set in-game years per day")
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
     .addNumberOption((opt) =>
       opt.setName("years").setDescription("In-game years per day").setRequired(true),
     ),
@@ -23,20 +22,17 @@ const commands = [
   new SlashCommandBuilder()
     .setName("settime")
     .setDescription("Manually set the in-game year")
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
     .addNumberOption((opt) =>
       opt.setName("years").setDescription("Year number").setRequired(true),
     ),
 
   new SlashCommandBuilder()
     .setName("pause")
-    .setDescription("Pause time progression")
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .setDescription("Pause time progression"),
 
   new SlashCommandBuilder()
     .setName("resume")
-    .setDescription("Resume time progression")
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .setDescription("Resume time progression"),
 ].map((c) => c.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
