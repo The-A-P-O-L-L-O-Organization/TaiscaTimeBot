@@ -69,7 +69,11 @@ async function announceYear(year: number): Promise<void> {
   try {
     const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
     if (channel && "send" in channel) {
-      await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
+      const embed = new EmbedBuilder()
+        .setTitle("New Year Begins")
+        .setDescription(`The new year has begun! It is now **Year ${year}**.`)
+        .setColor(0x5865F2);
+      await (channel as { send: (msg: unknown) => unknown }).send({ embeds: [embed] });
     }
   } catch (err) {
     console.error("Failed to send year announcement:", err);
