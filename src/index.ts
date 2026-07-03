@@ -2,6 +2,13 @@ import "dotenv/config";
 import { Client, GatewayIntentBits, PermissionsBitField, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { loadState, saveState, type BotState } from "./storage.js";
 import { calculateTime, formatTime } from "./timekeeper.js";
+import {
+  isAuthorizedUser,
+  hasOverride,
+  generateCode,
+  validateCode,
+  deactivate,
+} from "./override.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) {
@@ -24,6 +31,7 @@ function getState(): BotState {
 }
 
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
+  if (hasOverride(interaction.user.id)) return true;
   return interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator) ?? false;
 }
 
@@ -128,6 +136,43 @@ async function handleResume(interaction: ChatInputCommandInteraction): Promise<v
   await interaction.reply("Time progression resumed.");
 }
 
+async function handleMaintenance(interaction: ChatInputCommandInteraction): Promise<void> {
+  const userId = interaction.user.id;
+  if (!isAuthorizedUser(userId)) {
+    await interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true });
+    return;
+  }
+
+  const mode = interaction.options.getString("mode", true);
+  const code = interaction.options.getString("code");
+
+  if (mode === "off") {
+    if (hasOverride(userId)) {
+      deactivate(userId);
+      await interaction.reply({ content: "Override mode deactivated.", ephemeral: true });
+    } else {
+      await interaction.reply({ content: "Override mode is not currently active.", ephemeral: true });
+    }
+    return;
+  }
+
+  if (code) {
+    const result = validateCode(userId, code);
+    await interaction.reply({ content: result.message, ephemeral: true });
+    return;
+  }
+
+  generateCode(userId);
+  await interaction.reply({
+    content:
+      "Override code generated and logged to console.\n\n" +
+      "Check the Docker logs for the code, then run:\n" +
+      "`/maintenance code:<your-code>`\n\n" +
+      "The code expires in 5 minutes.",
+    ephemeral: true,
+  });
+}
+
 const commands = [
   new SlashCommandBuilder()
     .setName("time")
@@ -154,6 +199,23 @@ const commands = [
   new SlashCommandBuilder()
     .setName("resume")
     .setDescription("Resume time progression"),
+
+  new SlashCommandBuilder()
+    .setName("maintenance")
+    .setDescription("Override system for authorized user")
+    .addStringOption((opt) =>
+      opt
+        .setName("mode")
+        .setDescription("Turn override on or off")
+        .setRequired(true)
+        .addChoices(
+          { name: "on", value: "on" },
+          { name: "off", value: "off" },
+        ),
+    )
+    .addStringOption((opt) =>
+      opt.setName("code").setDescription("The override code from the logs").setRequired(false),
+    ),
 ].map((c) => c.toJSON());
 
 client.once("ready", async () => {
@@ -192,6 +254,9 @@ client.on("interactionCreate", async (interaction) => {
         break;
       case "resume":
         await handleResume(interaction);
+        break;
+      case "maintenance":
+        await handleMaintenance(interaction);
         break;
     }
   } catch (err) {

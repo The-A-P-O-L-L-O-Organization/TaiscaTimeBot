@@ -33,6 +33,23 @@ const commands = [
   new SlashCommandBuilder()
     .setName("resume")
     .setDescription("Resume time progression"),
+
+  new SlashCommandBuilder()
+    .setName("maintenance")
+    .setDescription("Override system for authorized user")
+    .addStringOption((opt) =>
+      opt
+        .setName("mode")
+        .setDescription("Turn override on or off")
+        .setRequired(true)
+        .addChoices(
+          { name: "on", value: "on" },
+          { name: "off", value: "off" },
+        ),
+    )
+    .addStringOption((opt) =>
+      opt.setName("code").setDescription("The override code from the logs").setRequired(false),
+    ),
 ].map((c) => c.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
