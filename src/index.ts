@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Client, GatewayIntentBits, PermissionsBitField, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { Client, GatewayIntentBits, PermissionsBitField, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import { loadState, saveState, type BotState } from "./storage.js";
 import { calculateTime, formatTime } from "./timekeeper.js";
 import {
@@ -119,7 +119,11 @@ async function midnightTick(): Promise<void> {
 async function handleTime(interaction: ChatInputCommandInteraction): Promise<void> {
   const s = getState();
   const result = calculateTime(s, Date.now());
-  await interaction.reply(formatTime(result));
+  const embed = new EmbedBuilder()
+    .setTitle("Current In-Game Time")
+    .setDescription(formatTime(result))
+    .setColor(0x5865F2);
+  await interaction.reply({ embeds: [embed] });
 }
 
 async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<void> {
