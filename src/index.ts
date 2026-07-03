@@ -20,6 +20,8 @@ const ANNOUNCEMENT_CHANNEL_ID = "1520917412046700606";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+const MS_PER_DAY = 86400000;
+
 let state: BotState;
 
 function getState(): BotState {
@@ -30,29 +32,86 @@ function getState(): BotState {
   return state;
 }
 
+function catchUpMissedMidnights(): void {
+  if (state.paused) return;
+
+  const now = Date.now();
+  const baseDay = Date.UTC(
+    new Date(state.baseRealTimestamp).getUTCFullYear(),
+    new Date(state.baseRealTimestamp).getUTCMonth(),
+    new Date(state.baseRealTimestamp).getUTCDate(),
+  );
+  const today = Date.UTC(
+    new Date(now).getUTCFullYear(),
+    new Date(now).getUTCMonth(),
+    new Date(now).getUTCDate(),
+  );
+
+  if (today > baseDay) {
+    const daysMissed = Math.floor((today - baseDay) / MS_PER_DAY);
+    if (daysMissed > 0) {
+      state.baseInGameYears += daysMissed * state.rateYears;
+      state.baseRealTimestamp = today;
+      console.log(`Caught up ${daysMissed} missed midnights. Total years now: ${state.baseInGameYears}`);
+      saveState(state);
+    }
+  }
+}
+
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
   if (hasOverride(interaction.user.id)) return true;
   return interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator) ?? false;
 }
 
-async function checkYearTick(): Promise<void> {
-  const s = getState();
-  const now = Date.now();
-  const totalYears = calculateTime(s, now).totalYears;
-  const year = Math.floor(totalYears);
-
-  if (year > s.lastAnnouncedYear) {
-    s.lastAnnouncedYear = year;
-    saveState(s);
-    try {
-      const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
-      if (channel && "send" in channel) {
-        await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
-      }
-    } catch (err) {
-      console.error("Failed to send year announcement:", err);
+async function announceYear(year: number): Promise<void> {
+  try {
+    const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
+    if (channel && "send" in channel) {
+      await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
     }
+  } catch (err) {
+    console.error("Failed to send year announcement:", err);
   }
+}
+
+function getMsUntilMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+  return midnight.getTime() - now.getTime();
+}
+
+function scheduleNextMidnight(): void {
+  const delay = getMsUntilMidnight();
+  console.log(`Next midnight tick in ${Math.round(delay / 1000)}s`);
+  setTimeout(midnightTick, delay);
+}
+
+async function midnightTick(): Promise<void> {
+  if (state.paused) {
+    console.log("Midnight tick skipped — bot is paused.");
+    scheduleNextMidnight();
+    return;
+  }
+
+  const now = Date.now();
+  const current = calculateTime(state, now);
+  const year = Math.floor(current.totalYears);
+
+  const todayMidnight = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
+
+  state.baseInGameYears = current.totalYears;
+  state.baseRealTimestamp = todayMidnight;
+
+  if (year > state.lastAnnouncedYear) {
+    state.lastAnnouncedYear = year;
+    saveState(state);
+    console.log(`Midnight tick: Year ${year}`);
+    await announceYear(year);
+  } else {
+    saveState(state);
+  }
+
+  scheduleNextMidnight();
 }
 
 async function handleTime(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -224,7 +283,13 @@ client.once("ready", async () => {
   state = loadState();
   console.log("State loaded:", JSON.stringify(state, null, 2));
 
-  setInterval(checkYearTick, 10000);
+  if (state.baseRealTimestamp === 0) {
+    state.baseRealTimestamp = Date.now();
+    saveState(state);
+  }
+
+  catchUpMissedMidnights();
+  scheduleNextMidnight();
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   try {
