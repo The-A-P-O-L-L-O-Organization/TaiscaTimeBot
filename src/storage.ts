@@ -7,16 +7,24 @@ const DATA_DIR = join(__dirname, "..", "data");
 const STATE_PATH = join(DATA_DIR, "state.json");
 
 export interface BotState {
-  totalYears: number;
+  baseRealTimestamp: number;
+  baseInGameYears: number;
   rateYears: number;
   paused: boolean;
+  pausedAtMs: number;
+  totalPausedMs: number;
   lastAnnouncedYear: number;
 }
 
+const MS_PER_DAY = 86400000;
+
 const DEFAULTS: BotState = {
-  totalYears: 0,
+  baseRealTimestamp: Date.now(),
+  baseInGameYears: 0,
   rateYears: 4,
   paused: false,
+  pausedAtMs: 0,
+  totalPausedMs: 0,
   lastAnnouncedYear: 0,
 };
 
@@ -24,7 +32,8 @@ function isValidState(obj: unknown): obj is BotState {
   if (typeof obj !== "object" || obj === null) return false;
   const s = obj as Record<string, unknown>;
   return (
-    typeof s.totalYears === "number" &&
+    typeof s.baseRealTimestamp === "number" &&
+    typeof s.baseInGameYears === "number" &&
     typeof s.rateYears === "number" &&
     typeof s.paused === "boolean"
   );

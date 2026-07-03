@@ -16,6 +16,10 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 let state: BotState;
 
 function getState(): BotState {
+  if (state.baseRealTimestamp === 0) {
+    state.baseRealTimestamp = Date.now();
+    saveState(state);
+  }
   return state;
 }
 
@@ -23,49 +27,29 @@ function isAdmin(interaction: ChatInputCommandInteraction): boolean {
   return interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator) ?? false;
 }
 
-async function announceYear(year: number): Promise<void> {
-  try {
-    const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
-    if (channel && "send" in channel) {
-      await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
+async function checkYearTick(): Promise<void> {
+  const s = getState();
+  const now = Date.now();
+  const totalYears = calculateTime(s, now).totalYears;
+  const year = Math.floor(totalYears);
+
+  if (year > s.lastAnnouncedYear) {
+    s.lastAnnouncedYear = year;
+    saveState(s);
+    try {
+      const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
+      if (channel && "send" in channel) {
+        await (channel as { send: (msg: string) => unknown }).send(`The new year has begun! It is now Year ${year}.`);
+      }
+    } catch (err) {
+      console.error("Failed to send year announcement:", err);
     }
-  } catch (err) {
-    console.error("Failed to send year announcement:", err);
   }
-}
-
-async function processTick(): Promise<void> {
-  if (state.paused) return;
-
-  const oldYear = Math.floor(state.totalYears);
-  state.totalYears += state.rateYears;
-  const newYear = Math.floor(state.totalYears);
-
-  if (newYear > state.lastAnnouncedYear) {
-    state.lastAnnouncedYear = newYear;
-    saveState(state);
-    await announceYear(newYear);
-  } else {
-    saveState(state);
-  }
-}
-
-function getMsUntilMidnight(): number {
-  const now = new Date();
-  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
-  return midnight.getTime() - now.getTime();
-}
-
-function scheduleNextTick(): void {
-  const delay = getMsUntilMidnight();
-  setTimeout(async () => {
-    await processTick();
-    scheduleNextTick();
-  }, delay);
 }
 
 async function handleTime(interaction: ChatInputCommandInteraction): Promise<void> {
-  const result = calculateTime(getState());
+  const s = getState();
+  const result = calculateTime(s, Date.now());
   await interaction.reply(formatTime(result));
 }
 
@@ -77,8 +61,16 @@ async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<
   const years = interaction.options.getNumber("years", true);
 
   const s = getState();
+  const now = Date.now();
+  const current = calculateTime(s, now);
+
+  s.baseInGameYears = current.totalYears;
+  s.baseRealTimestamp = now;
   s.rateYears = years;
-  s.lastAnnouncedYear = Math.floor(s.totalYears);
+  s.totalPausedMs = 0;
+  s.pausedAtMs = 0;
+  s.paused = false;
+  s.lastAnnouncedYear = Math.floor(current.totalYears);
   saveState(s);
 
   await interaction.reply(`Rate set to ${years} years per day.`);
@@ -92,7 +84,11 @@ async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<
   const years = interaction.options.getNumber("years", true);
   const s = getState();
 
-  s.totalYears = years;
+  s.baseInGameYears = years;
+  s.baseRealTimestamp = Date.now();
+  s.totalPausedMs = 0;
+  s.pausedAtMs = 0;
+  s.paused = false;
   s.lastAnnouncedYear = Math.floor(years);
   saveState(s);
 
@@ -110,8 +106,9 @@ async function handlePause(interaction: ChatInputCommandInteraction): Promise<vo
     return;
   }
   s.paused = true;
+  s.pausedAtMs = Date.now();
   saveState(s);
-  await interaction.reply("Time progression paused. Midnight ticks will not advance time.");
+  await interaction.reply("Time progression paused.");
 }
 
 async function handleResume(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -124,9 +121,11 @@ async function handleResume(interaction: ChatInputCommandInteraction): Promise<v
     await interaction.reply("Time is already running.");
     return;
   }
+  s.totalPausedMs += Date.now() - s.pausedAtMs;
+  s.pausedAtMs = 0;
   s.paused = false;
   saveState(s);
-  await interaction.reply("Time progression resumed. Next midnight tick will advance time.");
+  await interaction.reply("Time progression resumed.");
 }
 
 const commands = [
@@ -163,7 +162,7 @@ client.once("ready", async () => {
   state = loadState();
   console.log("State loaded:", JSON.stringify(state, null, 2));
 
-  scheduleNextTick();
+  setInterval(checkYearTick, 10000);
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   try {
