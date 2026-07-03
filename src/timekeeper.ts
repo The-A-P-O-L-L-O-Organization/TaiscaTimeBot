@@ -43,7 +43,7 @@ export function formatTime(result: TimeResult): string {
   const barLength = 24;
   const filled = Math.round(result.progress * barLength);
   const empty = barLength - filled;
-  const bar = "|".repeat(filled) + ".".repeat(empty);
+  const bar = "▓".repeat(filled) + "░".repeat(empty);
 
   const nextYear = formatDuration(result.nextYearInMs);
   const status = result.paused ? "Paused" : "Running";
