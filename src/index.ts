@@ -9,6 +9,8 @@ import {
   validateCode,
   deactivate,
 } from "./override.js";
+import * as override from "./override.js";
+import { createInterlinkServer } from "./interlink/server.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) {
@@ -277,6 +279,8 @@ const commands = [
     ),
 ].map((c) => c.toJSON());
 
+let _interlinkServer: ReturnType<typeof createInterlinkServer> | null = null;
+
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user?.tag}`);
 
@@ -290,6 +294,17 @@ client.once("ready", async () => {
 
   catchUpMissedMidnights();
   scheduleNextMidnight();
+
+  const interlinkPort = parseInt(process.env.INTERLINK_PORT || "3458", 10);
+  const interlinkApiKey = process.env.INTERLINK_API_KEY;
+  if (interlinkApiKey) {
+    _interlinkServer = createInterlinkServer({ override, apiKey: interlinkApiKey });
+    _interlinkServer.listen(interlinkPort, () => {
+      console.log(`[Interlink] Server listening on port ${interlinkPort}`);
+    });
+  } else {
+    console.log("[Interlink] INTERLINK_API_KEY not set — server disabled");
+  }
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   try {
@@ -331,6 +346,20 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({ content: `Error: ${msg}`, ephemeral: true });
     }
   }
+});
+
+process.on("SIGINT", () => {
+  console.log("\nShutting down...");
+  if (_interlinkServer) _interlinkServer.close();
+  client.destroy();
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.log("\nShutting down...");
+  if (_interlinkServer) _interlinkServer.close();
+  client.destroy();
+  process.exit(0);
 });
 
 client.login(TOKEN);

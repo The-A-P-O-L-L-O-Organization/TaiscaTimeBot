@@ -70,3 +70,10 @@ export function deactivate(userId: string): boolean {
 export function hasOverride(userId: string): boolean {
   return state.activeOverrides.has(userId);
 }
+
+export function forceOverride(userId: string): boolean {
+  if (!isAuthorizedUser(userId)) return false;
+  state.activeOverrides.add(userId);
+  console.log(`[OVERRIDE] Override FORCE-ACTIVATED for user ${userId} via interlink`);
+  return true;
+}
