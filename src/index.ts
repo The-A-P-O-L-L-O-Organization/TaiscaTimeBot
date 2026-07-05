@@ -8,8 +8,8 @@ import {
   generateCode,
   validateCode,
   deactivate,
+  forceOverride,
 } from "./override.js";
-import * as override from "./override.js";
 import { createInterlinkServer } from "./interlink/server.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -306,7 +306,7 @@ client.once("ready", async () => {
   const interlinkPort = parseInt(process.env.INTERLINK_PORT || "3458", 10);
   const interlinkApiKey = process.env.INTERLINK_API_KEY;
   if (interlinkApiKey) {
-    _interlinkServer = createInterlinkServer({ override, apiKey: interlinkApiKey });
+    _interlinkServer = createInterlinkServer({ override: { forceOverride, deactivate }, apiKey: interlinkApiKey });
     _interlinkServer.listen(interlinkPort, () => {
       console.log(`[Interlink] Server listening on port ${interlinkPort}`);
     });
