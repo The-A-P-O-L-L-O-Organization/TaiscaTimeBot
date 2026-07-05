@@ -1,5 +1,14 @@
 import "dotenv/config";
-import { Client, GatewayIntentBits, PermissionsBitField, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import {
+  Client,
+  GatewayIntentBits,
+  PermissionsBitField,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+} from "discord.js";
 import { loadState, saveState, type BotState } from "./storage.js";
 import { calculateTime, formatTime } from "./timekeeper.js";
 import {
@@ -54,7 +63,9 @@ function catchUpMissedMidnights(): void {
     if (daysMissed > 0) {
       state.baseInGameYears += daysMissed * state.rateYears;
       state.baseRealTimestamp = today;
-      console.log(`Caught up ${daysMissed} missed midnights. Total years now: ${state.baseInGameYears}`);
+      console.log(
+        `Caught up ${daysMissed} missed midnights. Total years now: ${state.baseInGameYears}`,
+      );
       saveState(state);
     }
   }
@@ -62,7 +73,11 @@ function catchUpMissedMidnights(): void {
 
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
   if (hasOverride(interaction.user.id)) return true;
-  return interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator) ?? false;
+  return (
+    interaction.memberPermissions?.has(
+      PermissionsBitField.Flags.Administrator,
+    ) ?? false
+  );
 }
 
 async function announceYear(year: number): Promise<void> {
@@ -72,8 +87,10 @@ async function announceYear(year: number): Promise<void> {
       const embed = new EmbedBuilder()
         .setTitle("New Year Begins")
         .setDescription(`The new year has begun! It is now **Year ${year}**.`)
-        .setColor(0x5865F2);
-      await (channel as { send: (msg: unknown) => unknown }).send({ embeds: [embed] });
+        .setColor(0x5865f2);
+      await (channel as { send: (msg: unknown) => unknown }).send({
+        embeds: [embed],
+      });
     }
   } catch (err) {
     console.error("Failed to send year announcement:", err);
@@ -82,7 +99,17 @@ async function announceYear(year: number): Promise<void> {
 
 function getMsUntilMidnight(): number {
   const now = new Date();
-  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+  const midnight = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1,
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
   return midnight.getTime() - now.getTime();
 }
 
@@ -103,7 +130,11 @@ async function midnightTick(): Promise<void> {
   const current = calculateTime(state, now);
   const year = Math.floor(current.totalYears);
 
-  const todayMidnight = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
+  const todayMidnight = Date.UTC(
+    new Date(now).getUTCFullYear(),
+    new Date(now).getUTCMonth(),
+    new Date(now).getUTCDate(),
+  );
 
   state.baseInGameYears = current.totalYears;
   state.baseRealTimestamp = todayMidnight;
@@ -120,19 +151,26 @@ async function midnightTick(): Promise<void> {
   scheduleNextMidnight();
 }
 
-async function handleTime(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleTime(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   const s = getState();
   const result = calculateTime(s, Date.now());
   const embed = new EmbedBuilder()
     .setTitle("Current In-Game Time")
     .setDescription(formatTime(result))
-    .setColor(0x5865F2);
+    .setColor(0x5865f2);
   await interaction.reply({ embeds: [embed] });
 }
 
-async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleSetRate(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!isAdmin(interaction)) {
-    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
     return;
   }
   const years = interaction.options.getNumber("years", true);
@@ -153,9 +191,14 @@ async function handleSetRate(interaction: ChatInputCommandInteraction): Promise<
   await interaction.reply(`Rate set to ${years} years per day.`);
 }
 
-async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleSetTime(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!isAdmin(interaction)) {
-    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
     return;
   }
   const years = interaction.options.getNumber("years", true);
@@ -172,9 +215,14 @@ async function handleSetTime(interaction: ChatInputCommandInteraction): Promise<
   await interaction.reply(`Time set to year ${Math.floor(years)}.`);
 }
 
-async function handlePause(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handlePause(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!isAdmin(interaction)) {
-    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
     return;
   }
   const s = getState();
@@ -188,9 +236,14 @@ async function handlePause(interaction: ChatInputCommandInteraction): Promise<vo
   await interaction.reply("Time progression paused.");
 }
 
-async function handleResume(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleResume(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!isAdmin(interaction)) {
-    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
     return;
   }
   const s = getState();
@@ -205,9 +258,14 @@ async function handleResume(interaction: ChatInputCommandInteraction): Promise<v
   await interaction.reply("Time progression resumed.");
 }
 
-async function handleReset(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleReset(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!isAdmin(interaction)) {
-    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
     return;
   }
   const s = getState();
@@ -221,10 +279,58 @@ async function handleReset(interaction: ChatInputCommandInteraction): Promise<vo
   await interaction.reply("Time has been reset to year 0 and paused.");
 }
 
-async function handleMaintenance(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleAnnounce(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({
+      content: "You need Administrator permission.",
+      ephemeral: true,
+    });
+    return;
+  }
+  try {
+    const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
+    if (!channel || !("send" in channel)) {
+      await interaction.reply({
+        content: "Could not find the announcement channel.",
+        ephemeral: true,
+      });
+      return;
+    }
+    const embed = new EmbedBuilder()
+      .setTitle("Taisca Time Bot")
+      .setDescription(
+        "Hey! Nice to meet you! I'll help you know what time it is in Taisca!\n\n" +
+          "I'm programmed by <@1068324046422413373>!\n\n" +
+          "Use `/time` to check the current in-game date and time. " +
+          "The world progresses in real-time, with years passing at a set rate each day. " +
+           "Keep an eye on <#1520917412046700606> for year milestones!",
+      )
+      .setColor(0x5865f2)
+      .setTimestamp();
+    await (channel as { send: (msg: unknown) => unknown }).send({
+      embeds: [embed],
+    });
+    await interaction.reply({ content: "Announcement sent!", ephemeral: true });
+  } catch (err) {
+    console.error("Failed to send announcement:", err);
+    await interaction.reply({
+      content: "Failed to send announcement.",
+      ephemeral: true,
+    });
+  }
+}
+
+async function handleMaintenance(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   const userId = interaction.user.id;
   if (!isAuthorizedUser(userId)) {
-    await interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true });
+    await interaction.reply({
+      content: "You are not authorized to use this command.",
+      ephemeral: true,
+    });
     return;
   }
 
@@ -234,9 +340,15 @@ async function handleMaintenance(interaction: ChatInputCommandInteraction): Prom
   if (mode === "off") {
     if (hasOverride(userId)) {
       deactivate(userId);
-      await interaction.reply({ content: "Override mode deactivated.", ephemeral: true });
+      await interaction.reply({
+        content: "Override mode deactivated.",
+        ephemeral: true,
+      });
     } else {
-      await interaction.reply({ content: "Override mode is not currently active.", ephemeral: true });
+      await interaction.reply({
+        content: "Override mode is not currently active.",
+        ephemeral: true,
+      });
     }
     return;
   }
@@ -267,7 +379,10 @@ const commands = [
     .setName("setrate")
     .setDescription("Set in-game years per day")
     .addNumberOption((opt) =>
-      opt.setName("years").setDescription("In-game years per day").setRequired(true),
+      opt
+        .setName("years")
+        .setDescription("In-game years per day")
+        .setRequired(true),
     ),
 
   new SlashCommandBuilder()
@@ -290,6 +405,10 @@ const commands = [
     .setDescription("Reset time to year 0 and pause"),
 
   new SlashCommandBuilder()
+    .setName("announce")
+    .setDescription("Send a greeting announcement to the announcement channel"),
+
+  new SlashCommandBuilder()
     .setName("maintenance")
     .setDescription("Override system for authorized user")
     .addStringOption((opt) =>
@@ -297,13 +416,13 @@ const commands = [
         .setName("mode")
         .setDescription("Turn override on or off")
         .setRequired(true)
-        .addChoices(
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ),
+        .addChoices({ name: "on", value: "on" }, { name: "off", value: "off" }),
     )
     .addStringOption((opt) =>
-      opt.setName("code").setDescription("The override code from the logs").setRequired(false),
+      opt
+        .setName("code")
+        .setDescription("The override code from the logs")
+        .setRequired(false),
     ),
 ].map((c) => c.toJSON());
 
@@ -326,7 +445,10 @@ client.once("ready", async () => {
   const interlinkPort = parseInt(process.env.INTERLINK_PORT || "3458", 10);
   const interlinkApiKey = process.env.INTERLINK_API_KEY;
   if (interlinkApiKey) {
-    _interlinkServer = createInterlinkServer({ override: { forceOverride, deactivate }, apiKey: interlinkApiKey });
+    _interlinkServer = createInterlinkServer({
+      override: { forceOverride, deactivate },
+      apiKey: interlinkApiKey,
+    });
     _interlinkServer.listen(interlinkPort, () => {
       console.log(`[Interlink] Server listening on port ${interlinkPort}`);
     });
@@ -336,7 +458,9 @@ client.once("ready", async () => {
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   try {
-    await rest.put(Routes.applicationCommands(client.user!.id), { body: commands });
+    await rest.put(Routes.applicationCommands(client.user!.id), {
+      body: commands,
+    });
     console.log("Slash commands registered.");
   } catch (err) {
     console.error("Failed to register commands:", err);
@@ -365,6 +489,9 @@ client.on("interactionCreate", async (interaction) => {
         break;
       case "reset":
         await handleReset(interaction);
+        break;
+      case "announce":
+        await handleAnnounce(interaction);
         break;
       case "maintenance":
         await handleMaintenance(interaction);

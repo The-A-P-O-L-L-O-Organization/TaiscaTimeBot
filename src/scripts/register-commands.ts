@@ -39,6 +39,10 @@ const commands = [
     .setDescription("Reset time to year 0 and pause"),
 
   new SlashCommandBuilder()
+    .setName("announce")
+    .setDescription("Send a greeting announcement to the announcement channel"),
+
+  new SlashCommandBuilder()
     .setName("maintenance")
     .setDescription("Override system for authorized user")
     .addStringOption((opt) =>
