@@ -35,6 +35,10 @@ const commands = [
     .setDescription("Resume time progression"),
 
   new SlashCommandBuilder()
+    .setName("reset")
+    .setDescription("Reset time to year 0 and pause"),
+
+  new SlashCommandBuilder()
     .setName("maintenance")
     .setDescription("Override system for authorized user")
     .addStringOption((opt) =>

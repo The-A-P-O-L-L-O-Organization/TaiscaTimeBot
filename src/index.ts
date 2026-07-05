@@ -205,6 +205,22 @@ async function handleResume(interaction: ChatInputCommandInteraction): Promise<v
   await interaction.reply("Time progression resumed.");
 }
 
+async function handleReset(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!isAdmin(interaction)) {
+    await interaction.reply({ content: "You need Administrator permission.", ephemeral: true });
+    return;
+  }
+  const s = getState();
+  s.baseInGameYears = 0;
+  s.baseRealTimestamp = Date.now();
+  s.totalPausedMs = 0;
+  s.pausedAtMs = Date.now();
+  s.paused = true;
+  s.lastAnnouncedYear = 0;
+  saveState(s);
+  await interaction.reply("Time has been reset to year 0 and paused.");
+}
+
 async function handleMaintenance(interaction: ChatInputCommandInteraction): Promise<void> {
   const userId = interaction.user.id;
   if (!isAuthorizedUser(userId)) {
@@ -268,6 +284,10 @@ const commands = [
   new SlashCommandBuilder()
     .setName("resume")
     .setDescription("Resume time progression"),
+
+  new SlashCommandBuilder()
+    .setName("reset")
+    .setDescription("Reset time to year 0 and pause"),
 
   new SlashCommandBuilder()
     .setName("maintenance")
@@ -342,6 +362,9 @@ client.on("interactionCreate", async (interaction) => {
         break;
       case "resume":
         await handleResume(interaction);
+        break;
+      case "reset":
+        await handleReset(interaction);
         break;
       case "maintenance":
         await handleMaintenance(interaction);
